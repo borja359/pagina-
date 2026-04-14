@@ -1,0 +1,708 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Concavidad y Puntos de Inflexión</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --navy: #0d1b4b;
+    --navy-mid: #1a2e6e;
+    --navy-light: #2a44a0;
+    --navy-pale: #dce5f8;
+    --accent: #3a7bd5;
+    --accent2: #e8b84b;
+    --white: #ffffff;
+    --off-white: #f5f7fe;
+    --text-dark: #0d1b4b;
+    --text-mid: #2a44a0;
+    --text-soft: #607090;
+    --concave-up: #1db584;
+    --concave-down: #e05252;
+    --inflection: #e8b84b;
+    --shadow: 0 4px 24px rgba(13,27,75,0.10);
+    --shadow-lg: 0 8px 40px rgba(13,27,75,0.16);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--off-white);
+    color: var(--text-dark);
+    min-height: 100vh;
+  }
+
+  header {
+    background: linear-gradient(135deg, var(--navy) 0%, var(--navy-mid) 60%, var(--navy-light) 100%);
+    color: var(--white);
+    padding: 2.5rem 2rem 2rem;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+  header::before {
+    content: '';
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 80% 50%, rgba(58,123,213,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  header h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(1.6rem, 4vw, 2.6rem);
+    letter-spacing: -0.5px;
+    margin-bottom: 0.4rem;
+    position: relative;
+  }
+  header p {
+    font-size: 0.95rem;
+    opacity: 0.75;
+    font-weight: 300;
+    position: relative;
+  }
+
+  .container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 2rem 1rem 3rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .card {
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 1.75rem 2rem;
+  }
+
+  .section-title {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 0.85rem;
+  }
+
+  /* Explanation section */
+  .analogy-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  @media (max-width: 600px) { .analogy-grid { grid-template-columns: 1fr; } }
+
+  .analogy-card {
+    border-radius: 12px;
+    padding: 1.25rem 1rem;
+    text-align: center;
+    border: 1.5px solid;
+  }
+  .analogy-card.up {
+    background: #edfaf4; border-color: var(--concave-up);
+  }
+  .analogy-card.down {
+    background: #fef0f0; border-color: var(--concave-down);
+  }
+  .analogy-card.inf {
+    background: #fffbec; border-color: var(--inflection);
+  }
+  .analogy-card .icon {
+    font-size: 2.4rem;
+    line-height: 1;
+    margin-bottom: 0.5rem;
+  }
+  .analogy-card h3 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-bottom: 0.3rem;
+  }
+  .analogy-card p {
+    font-size: 0.80rem;
+    line-height: 1.5;
+    color: var(--text-soft);
+  }
+  .analogy-card.up h3 { color: #0e8a5f; }
+  .analogy-card.down h3 { color: #b83030; }
+  .analogy-card.inf h3 { color: #9a6e00; }
+
+  /* Formulas */
+  .formula-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  .formula-box {
+    background: var(--off-white);
+    border-radius: 10px;
+    border-left: 3px solid var(--navy-light);
+    padding: 0.9rem 1.1rem;
+  }
+  .formula-box .label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin-bottom: 0.35rem;
+  }
+  .formula-box .expr {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.05rem;
+    color: var(--navy);
+    font-weight: 700;
+  }
+
+  /* Function editor */
+  .fn-editor {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+  }
+  .fn-editor label {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: var(--text-mid);
+    white-space: nowrap;
+  }
+  .fn-editor input[type="text"] {
+    flex: 1;
+    min-width: 180px;
+    padding: 0.55rem 0.9rem;
+    border: 1.5px solid var(--navy-pale);
+    border-radius: 8px;
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--navy);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .fn-editor input[type="text"]:focus { border-color: var(--accent); }
+  .fn-editor button {
+    padding: 0.55rem 1.3rem;
+    background: var(--navy);
+    color: var(--white);
+    border: none;
+    border-radius: 8px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .fn-editor button:hover { background: var(--navy-light); }
+  .fn-editor button:active { transform: scale(0.97); }
+  .fn-error {
+    font-size: 0.78rem;
+    color: var(--concave-down);
+    margin-top: 0.3rem;
+    display: none;
+  }
+  .fn-hint {
+    font-size: 0.75rem;
+    color: var(--text-soft);
+    margin-top: 0.3rem;
+  }
+
+  /* Canvas */
+  .canvas-wrap {
+    width: 100%;
+    border-radius: 12px;
+    overflow: hidden;
+    background: #f8faff;
+    border: 1px solid var(--navy-pale);
+    position: relative;
+  }
+  canvas#graph { display: block; width: 100%; }
+
+  /* Slider */
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1rem;
+  }
+  .slider-row label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-mid);
+    white-space: nowrap;
+  }
+  input[type="range"] {
+    flex: 1;
+    accent-color: var(--navy);
+    height: 6px;
+    cursor: pointer;
+  }
+  .slider-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--navy);
+    min-width: 52px;
+    text-align: right;
+  }
+
+  /* Status panel */
+  .status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-top: 0.5rem;
+  }
+  .stat-box {
+    background: var(--off-white);
+    border-radius: 10px;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--navy-pale);
+  }
+  .stat-box .stat-label {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    margin-bottom: 0.35rem;
+  }
+  .stat-box .stat-val {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--navy);
+  }
+  .status-badge {
+    border-radius: 10px;
+    padding: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-weight: 700;
+    font-size: 0.95rem;
+    transition: background 0.3s, color 0.3s;
+  }
+  .status-badge .badge-icon { font-size: 1.5rem; }
+
+  .badge-up { background: #edfaf4; color: #0e7a55; }
+  .badge-down { background: #fef0f0; color: #b83030; }
+  .badge-inf { background: #fffbec; color: #9a6000; }
+
+  /* Theory note */
+  .theory {
+    font-size: 0.85rem;
+    line-height: 1.75;
+    color: var(--text-soft);
+  }
+  .theory strong { color: var(--navy); }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Concavidad y Puntos de Inflexión</h1>
+  <p>Explora cómo la segunda derivada revela la "curvatura" de una función</p>
+</header>
+
+<div class="container">
+
+  <!-- Explanation -->
+  <div class="card">
+    <div class="section-title">¿Qué significa concavidad?</div>
+    <p class="theory">
+      Imagina que la curva es un camino. Si el camino se dobla hacia <strong>arriba como una sonrisa</strong>, decimos que es <strong>cóncava hacia arriba</strong>. Si se dobla hacia <strong>abajo como una cara triste</strong>, es <strong>cóncava hacia abajo</strong>. La <strong>segunda derivada f''(x)</strong> es el detector de curvatura: su signo nos dice exactamente qué forma tiene la curva en cada punto. Cuando f''(x) cambia de signo, la curva cambia de "humor": ese momento exacto se llama <strong>Punto de Inflexión</strong>.
+    </p>
+    <div class="analogy-grid">
+      <div class="analogy-card up">
+        <div class="icon">😊</div>
+        <h3>Cóncava hacia Arriba</h3>
+        <p>f''(x) &gt; 0<br>La curva "sostiene agua".<br>La pendiente va aumentando.</p>
+      </div>
+      <div class="analogy-card down">
+        <div class="icon">🙁</div>
+        <h3>Cóncava hacia Abajo</h3>
+        <p>f''(x) &lt; 0<br>La curva "derrama agua".<br>La pendiente va disminuyendo.</p>
+      </div>
+      <div class="analogy-card inf">
+        <div class="icon">🔄</div>
+        <h3>Punto de Inflexión</h3>
+        <p>f''(x) = 0<br>La curva cambia de curvatura.<br>El "humor" cambia aquí.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Function editor -->
+  <div class="card">
+    <div class="section-title">Función a analizar</div>
+    <div class="fn-editor">
+      <label>f(x) =</label>
+      <input type="text" id="fnInput" value="x^3 - 3*x" placeholder="Ej: x^3 - 3*x" />
+      <button onclick="applyFunction()">Aplicar ↗</button>
+    </div>
+    <div class="fn-hint">Usa: x^2, x^3, Math.sin(x), Math.cos(x), Math.exp(x), Math.abs(x), etc.</div>
+    <div class="fn-error" id="fnError">⚠ Función inválida. Revisa la sintaxis.</div>
+
+    <!-- Formulas display -->
+    <div class="formula-grid" style="margin-top:1.25rem;">
+      <div class="formula-box">
+        <div class="label">Función</div>
+        <div class="expr" id="fLabel">f(x) = x³ – 3x</div>
+      </div>
+      <div class="formula-box" style="border-left-color: var(--accent);">
+        <div class="label">Primera derivada</div>
+        <div class="expr" id="f1Label">f′(x) = 3x² – 3</div>
+      </div>
+      <div class="formula-box" style="border-left-color: var(--inflection);">
+        <div class="label">Segunda derivada</div>
+        <div class="expr" id="f2Label">f″(x) = 6x</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Graph + Slider -->
+  <div class="card">
+    <div class="section-title">Gráfica interactiva</div>
+    <div class="canvas-wrap">
+      <canvas id="graph" height="380"></canvas>
+    </div>
+
+    <div class="slider-row">
+      <label>Valor de x:</label>
+      <input type="range" id="xSlider" min="-3" max="3" step="0.01" value="0">
+      <span class="slider-val" id="sliderDisplay">x = 0.00</span>
+    </div>
+  </div>
+
+  <!-- Status panel -->
+  <div class="card">
+    <div class="section-title">Estado actual</div>
+    <div class="status-grid">
+      <div class="stat-box">
+        <div class="stat-label">x</div>
+        <div class="stat-val" id="statX">0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">f(x)</div>
+        <div class="stat-val" id="statFx">0.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">f′(x) — Pendiente</div>
+        <div class="stat-val" id="statF1">−3.00</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-label">f″(x) — Curvatura</div>
+        <div class="stat-val" id="statF2">0.00</div>
+      </div>
+      <div class="status-badge badge-inf" id="statusBadge" style="grid-column: 1 / -1;">
+        <span class="badge-icon">🔄</span>
+        <span id="statusText">¡Punto de Inflexión!</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Theory note -->
+  <div class="card">
+    <div class="section-title">¿Cómo se calcula?</div>
+    <p class="theory">
+      Para encontrar puntos de inflexión: <strong>1)</strong> Calcula f″(x). <strong>2)</strong> Iguala f″(x) = 0 y resuelve para x. <strong>3)</strong> Verifica que el signo de f″(x) <em>cambie</em> a ambos lados de ese punto — si no cambia, no es un punto de inflexión.<br><br>
+      Para <strong>f(x) = x³ − 3x</strong>: f″(x) = 6x = 0 → x = 0. A la izquierda f″(−1) = −6 &lt; 0 (cóncava abajo), a la derecha f″(1) = 6 &gt; 0 (cóncava arriba). ✓ El signo cambia, así que <strong>x = 0 es un punto de inflexión</strong>.
+    </p>
+  </div>
+
+</div>
+
+<script>
+  const h = 1e-5;
+  let fnStr = "x**3 - 3*x";
+  let fnDisplay = ["f(x) = x³ – 3x", "f′(x) = 3x² – 3", "f″(x) = 6x"];
+
+  function evalFn(expr, xVal) {
+    const x = xVal;
+    return eval(expr.replace(/\^/g, '**'));
+  }
+
+  function f(x) { return evalFn(fnStr, x); }
+  function f1(x) { return (f(x + h) - f(x - h)) / (2 * h); }
+  function f2(x) { return (f(x + h) - 2 * f(x) + f(x - h)) / (h * h); }
+
+  function applyFunction() {
+    const raw = document.getElementById('fnInput').value.trim();
+    const errEl = document.getElementById('fnError');
+    try {
+      evalFn(raw, 0);
+      evalFn(raw, 1);
+      evalFn(raw, -1);
+      fnStr = raw;
+      errEl.style.display = 'none';
+      document.getElementById('fLabel').textContent = 'f(x) = ' + raw;
+      document.getElementById('f1Label').textContent = "f′(x) ≈ derivada numérica";
+      document.getElementById('f2Label').textContent = "f″(x) ≈ derivada numérica";
+      drawAll();
+    } catch(e) {
+      errEl.style.display = 'block';
+    }
+  }
+
+  const canvas = document.getElementById('graph');
+  const ctx = canvas.getContext('2d');
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    const rect = canvas.parentElement.getBoundingClientRect();
+    canvas.width = rect.width * dpr;
+    canvas.height = 380 * dpr;
+    canvas.style.height = '380px';
+    ctx.scale(dpr, dpr);
+    drawAll();
+  }
+
+  function worldToScreen(x, y, W, H, xMin, xMax, yMin, yMax) {
+    const sx = (x - xMin) / (xMax - xMin) * W;
+    const sy = H - (y - yMin) / (yMax - yMin) * H;
+    return [sx, sy];
+  }
+
+  function drawAll() {
+    const dpr = window.devicePixelRatio || 1;
+    const W = canvas.width / dpr;
+    const H = canvas.height / dpr;
+    ctx.clearRect(0, 0, W, H);
+
+    const xMin = -3.5, xMax = 3.5;
+    const margin = 48;
+    const plotW = W - margin * 2, plotH = H - margin * 2;
+
+    // Compute y range
+    let yVals = [];
+    for (let i = 0; i <= 300; i++) {
+      const xi = xMin + (xMax - xMin) * i / 300;
+      try { const yi = f(xi); if (isFinite(yi)) yVals.push(yi); } catch(e) {}
+    }
+    let yMin = Math.min(...yVals), yMax = Math.max(...yVals);
+    const yPad = (yMax - yMin) * 0.18 || 1;
+    yMin -= yPad; yMax += yPad;
+
+    function toS(x, y) {
+      return [
+        margin + (x - xMin) / (xMax - xMin) * plotW,
+        margin + plotH - (y - yMin) / (yMax - yMin) * plotH
+      ];
+    }
+
+    // Background
+    ctx.fillStyle = '#f8faff';
+    ctx.fillRect(0, 0, W, H);
+
+    // Grid lines
+    ctx.strokeStyle = 'rgba(13,27,75,0.07)';
+    ctx.lineWidth = 1;
+    for (let xi = Math.ceil(xMin); xi <= xMax; xi++) {
+      const [sx] = toS(xi, 0);
+      ctx.beginPath(); ctx.moveTo(sx, margin); ctx.lineTo(sx, margin + plotH); ctx.stroke();
+    }
+    const yStep = (yMax - yMin) / 6;
+    for (let i = 0; i <= 6; i++) {
+      const yi = yMin + yStep * i;
+      const [, sy] = toS(0, yi);
+      ctx.beginPath(); ctx.moveTo(margin, sy); ctx.lineTo(margin + plotW, sy); ctx.stroke();
+    }
+
+    // Axes
+    ctx.strokeStyle = 'rgba(13,27,75,0.25)';
+    ctx.lineWidth = 1.5;
+    const [ax0] = toS(xMin, 0); const [ax1] = toS(xMax, 0);
+    const [, ay0] = toS(0, yMin); const [, ay1] = toS(0, yMax);
+    const [axisX] = toS(0, 0); const [, axisY] = toS(0, 0);
+    ctx.beginPath(); ctx.moveTo(ax0, axisY); ctx.lineTo(ax1, axisY); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(axisX, ay0); ctx.lineTo(axisX, ay1); ctx.stroke();
+
+    // Axis tick labels
+    ctx.fillStyle = 'rgba(13,27,75,0.45)';
+    ctx.font = '11px Inter, sans-serif';
+    ctx.textAlign = 'center';
+    for (let xi = Math.ceil(xMin); xi <= xMax; xi++) {
+      if (xi === 0) continue;
+      const [sx] = toS(xi, 0);
+      ctx.fillText(xi, sx, axisY + 16);
+    }
+    ctx.textAlign = 'right';
+    for (let i = 0; i <= 6; i++) {
+      const yi = yMin + yStep * i;
+      if (Math.abs(yi) < yStep * 0.1) continue;
+      const [, sy] = toS(0, yi);
+      ctx.fillText(yi.toFixed(1), axisX - 6, sy + 4);
+    }
+    ctx.textAlign = 'center';
+    ctx.fillStyle = 'rgba(13,27,75,0.55)';
+    ctx.font = '12px Inter';
+    ctx.fillText('x', ax1 + 10, axisY + 4);
+    ctx.fillText('y', axisX, ay1 - 8);
+
+    // Concavity coloring
+    const steps = 400;
+    const dx = (xMax - xMin) / steps;
+    let i = 0;
+    while (i < steps) {
+      let j = i;
+      let c2 = null;
+      while (j < steps) {
+        const xi = xMin + j * dx;
+        let c2j;
+        try { c2j = f2(xi); } catch(e) { j++; continue; }
+        if (c2 === null) { c2 = c2j; j++; continue; }
+        const sameSign = (c2 >= 0 && c2j >= 0) || (c2 < 0 && c2j < 0);
+        if (!sameSign) break;
+        j++;
+      }
+      const xStart = xMin + i * dx;
+      const xEnd = xMin + j * dx;
+      const color = (c2 !== null && c2 > 0) ? 'rgba(29,181,132,0.07)' : 'rgba(224,82,82,0.07)';
+      const [sxStart] = toS(xStart, 0);
+      const [sxEnd] = toS(xEnd, 0);
+      ctx.fillStyle = color;
+      ctx.fillRect(sxStart, margin, sxEnd - sxStart, plotH);
+      i = j;
+    }
+
+    // Curve
+    ctx.beginPath();
+    ctx.strokeStyle = '#1a2e6e';
+    ctx.lineWidth = 2.5;
+    ctx.lineJoin = 'round';
+    let started = false;
+    for (let i = 0; i <= 500; i++) {
+      const xi = xMin + (xMax - xMin) * i / 500;
+      let yi;
+      try { yi = f(xi); } catch(e) { started = false; continue; }
+      if (!isFinite(yi)) { started = false; continue; }
+      const [sx, sy] = toS(xi, yi);
+      if (!started) { ctx.moveTo(sx, sy); started = true; }
+      else ctx.lineTo(sx, sy);
+    }
+    ctx.stroke();
+
+    // Inflection points approx
+    for (let i = 1; i < 500; i++) {
+      const xi1 = xMin + (xMax - xMin) * (i - 1) / 500;
+      const xi2 = xMin + (xMax - xMin) * i / 500;
+      let c1, c2v;
+      try { c1 = f2(xi1); c2v = f2(xi2); } catch(e) { continue; }
+      if ((c1 < 0 && c2v >= 0) || (c1 >= 0 && c2v < 0)) {
+        const xip = (xi1 + xi2) / 2;
+        let yip; try { yip = f(xip); } catch(e) { continue; }
+        const [sx, sy] = toS(xip, yip);
+        ctx.beginPath();
+        ctx.arc(sx, sy, 5, 0, Math.PI * 2);
+        ctx.fillStyle = var_inflection;
+        ctx.fill();
+        ctx.strokeStyle = '#9a6000';
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+    }
+
+    // Moving point & tangent
+    const xv = parseFloat(document.getElementById('xSlider').value);
+    let yv, slope;
+    try { yv = f(xv); slope = f1(xv); } catch(e) { return; }
+    if (!isFinite(yv)) return;
+    const [px, py] = toS(xv, yv);
+
+    // Tangent line
+    const tLen = 1.2;
+    const [tx0, ty0] = toS(xv - tLen, yv - slope * tLen);
+    const [tx1, ty1] = toS(xv + tLen, yv + slope * tLen);
+    ctx.beginPath();
+    ctx.strokeStyle = '#3a7bd5';
+    ctx.lineWidth = 1.8;
+    ctx.setLineDash([6, 4]);
+    ctx.moveTo(tx0, ty0);
+    ctx.lineTo(tx1, ty1);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Point
+    ctx.beginPath();
+    ctx.arc(px, py, 7, 0, Math.PI * 2);
+    ctx.fillStyle = '#3a7bd5';
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Label
+    const c2v2 = f2(xv);
+    const labelColor = Math.abs(c2v2) < 0.15 ? '#9a6000' : (c2v2 > 0 ? '#0e7a55' : '#b83030');
+    ctx.fillStyle = '#fff';
+    ctx.strokeStyle = labelColor;
+    ctx.lineWidth = 1.5;
+    const lx = px + 14, ly = py - 14;
+    ctx.beginPath();
+    ctx.roundRect(lx, ly - 16, 68, 20, 4);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = labelColor;
+    ctx.font = '600 11px Inter, sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(`x=${xv.toFixed(2)}`, lx + 5, ly - 2);
+  }
+
+  const var_inflection = '#e8b84b';
+
+  // Polyfill roundRect for older browsers
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      this.beginPath();
+      this.moveTo(x + r, y);
+      this.lineTo(x + w - r, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + r);
+      this.lineTo(x + w, y + h - r);
+      this.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      this.lineTo(x + r, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - r);
+      this.lineTo(x, y + r);
+      this.quadraticCurveTo(x, y, x + r, y);
+      this.closePath();
+    };
+  }
+
+  function updateStatus() {
+    const xv = parseFloat(document.getElementById('xSlider').value);
+    let fxv, f1v, f2v;
+    try {
+      fxv = f(xv); f1v = f1(xv); f2v = f2(xv);
+    } catch(e) { return; }
+
+    document.getElementById('sliderDisplay').textContent = `x = ${xv.toFixed(2)}`;
+    document.getElementById('statX').textContent = xv.toFixed(3);
+    document.getElementById('statFx').textContent = isFinite(fxv) ? fxv.toFixed(3) : '—';
+    document.getElementById('statF1').textContent = isFinite(f1v) ? f1v.toFixed(3) : '—';
+    document.getElementById('statF2').textContent = isFinite(f2v) ? f2v.toFixed(3) : '—';
+
+    const badge = document.getElementById('statusBadge');
+    const txt = document.getElementById('statusText');
+    if (!isFinite(f2v)) { return; }
+    if (Math.abs(f2v) < 0.15) {
+      badge.className = 'status-badge badge-inf';
+      txt.innerHTML = '🔄 &nbsp;¡Punto de Inflexión!  (f″(x) ≈ 0)';
+    } else if (f2v > 0) {
+      badge.className = 'status-badge badge-up';
+      txt.innerHTML = '😊 &nbsp;Cóncava hacia <strong>Arriba</strong>  —  f″(x) > 0';
+    } else {
+      badge.className = 'status-badge badge-down';
+      txt.innerHTML = '🙁 &nbsp;Cóncava hacia <strong>Abajo</strong>  —  f″(x) < 0';
+    }
+
+    drawAll();
+  }
+
+  document.getElementById('xSlider').addEventListener('input', updateStatus);
+
+  window.addEventListener('resize', resize);
+  resize();
+  updateStatus();
+</script>
+</body>
+</html>
